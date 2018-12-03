@@ -7,17 +7,19 @@
             <script src='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js'></script>
     </head>
     <body>
+
         <div class='container'>
+
             <div class='row'>
-                <h2>The IMDB dataset is fascinating because it is allowing us to observe some general
-                trends about movies. A movie's performance depends on a plethora of factors, and we
-                will observe a few of them today.</h2>
+                <h2>The IMDB dataset is fascinating because it is allowing us to observe some general trends about movies. A movie's performance depends on a plethora of factors, and we will observe a few of them today.</h2>
                 <h2>First, we observed that it's not just the content of the movie, but also its origins that affect its rating.</h2> 
                 <h2>As shown below, we can see that movies from some parts of the world
                 and some languages do better than others.</h2>
             </div>
             <div class='row'>
-                <svg = id='scoreVsCountry'></svg>
+                <div class='col-md-12'>
+                    <svg = id='scoreVsCountry'></svg>
+                </div>      
             </div>
         </div>
     </body>
@@ -30,7 +32,8 @@
             d3.csv("movie_metadata.csv"),
             d3.json("contries.geo.json"),
         ]).then(datasets => {
-            movieData.movies = datasets[0];
+            movieData.movies = getGrouped(datasets[0]);
+            console.log(getGrouped(datasets[0]));
             movieData.geoJSON = datasets[1]
             return movieData;
         })
@@ -39,6 +42,7 @@
     function getGrouped(data){
       var grouped = d3.nest()
       .key(function(d) { return d.country; })
+      .rollup(function(d){return d3.mean(d,function(x){return x.imdb_score;})})
       .entries(data);
       return grouped;
     }
@@ -60,29 +64,32 @@
     function getMapProjection(config) {
       let {width, height} = config;
       let projection = d3.geoMercator();
-      projection.scale(97).translate([width / 2, height / 2 + 20])           
+      projection.scale(100).translate([width/2, height / 1.5 ])           
       movieData.mapProjection = projection;
       return projection;
     }
 
     function drawBaseMap(container, countries, projection,type){
-    let green = d3.scaleLinear().domain([0,10]).range(['white','#234c31']);
+    let blue = d3.scalePow().exponent(2).domain([0,9.5]).range(['white','#0059b3']);
     let path = d3.geoPath().projection(projection);
+    d3.functor = function functor(v) {
+          return typeof v === "function" ? v : function() {
+            return v;
+          };
+        };
 
     container.selectAll("path").data(countries)
-      .enter().append("path")
-      .attr("d",path)
-      .attr("stroke", "white")
-      .attr("fill", function(d){
+        .enter().append("path")
+        .attr("d",path)
+        .attr("stroke", "white")
+        .attr("fill", function(d){
         for(var i = 0; i<movieData.movies.length; i++){
-          if(movieData.movies[i].country === d.properties.name){
-            let imdb_score = movieData.movies[i].imdb_score;
-            let movie_title = movieData.movies[i].movie_title;
-            console.log(imdb_score + " " + movie_title);
-            return green(Math.floor(imdb_score));    
+          if(movieData.movies[i].key === d.properties.name){
+            let imdb_score = movieData.movies[i].value;
+            return blue(Math.floor(imdb_score));    
             }      
         } 
-      });
+        });
     }
 
     function drawMap(geoJeon) {
