@@ -2,11 +2,94 @@
     <head>
         <title>Storytelling project</title>
         <script src="d3.js"></script>
+            <link rel='stylesheet' href='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css'>
+            <script src='https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js'></script>
+            <script src='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js'></script>
     </head>
     <body>
-        <div>My amazing page will goes here</div>
+        <div class='container'>
+            <div class='row'>
+                <h2>The IMDB dataset is fascinating because it is allowing us to observe some general
+                trends about movies. A movie's performance depends on a plethora of factors, and we
+                will observe a few of them today.</h2>
+                <h2>First, we observed that it's not just the content of the movie, but also its origins that affect its rating.</h2> 
+                <h2>As shown below, we can see that movies from some parts of the world
+                and some languages do better than others.</h2>
+            </div>
+            <div class='row'>
+                <svg = id='scoreVsCountry'></svg>
+            </div>
+        </div>
     </body>
     <script>
-        console.log(d3);
+
+    let movieData = {};
+
+    function loadData() {
+        return Promise.all([
+            d3.csv("movie_metadata.csv"),
+            d3.json("contries.geo.json"),
+        ]).then(datasets => {
+            movieData.movies = datasets[0];
+            movieData.geoJSON = datasets[1]
+            return movieData;
+        })
+    }
+
+    function getGrouped(data){
+      var grouped = d3.nest()
+      .key(function(d) { return d.country; })
+      .entries(data);
+      return grouped;
+    }
+
+    function showData() {
+      let movies = movieData.movies;
+      drawMap(movieData.geoJSON);
+    }
+
+    loadData().then(showData);
+
+    function getMapConfig(id){
+      let width = 800;
+      let height = 400;
+      let container = d3.select(id).attr('width',width).attr('height',height); 
+      return {width, height, container}
+    }
+
+    function getMapProjection(config) {
+      let {width, height} = config;
+      let projection = d3.geoMercator();
+      projection.scale(97).translate([width / 2, height / 2 + 20])           
+      movieData.mapProjection = projection;
+      return projection;
+    }
+
+    function drawBaseMap(container, countries, projection,type){
+    let green = d3.scaleLinear().domain([0,10]).range(['white','#234c31']);
+    let path = d3.geoPath().projection(projection);
+
+    container.selectAll("path").data(countries)
+      .enter().append("path")
+      .attr("d",path)
+      .attr("stroke", "white")
+      .attr("fill", function(d){
+        for(var i = 0; i<movieData.movies.length; i++){
+          if(movieData.movies[i].country === d.properties.name){
+            let imdb_score = movieData.movies[i].imdb_score;
+            let movie_title = movieData.movies[i].movie_title;
+            console.log(imdb_score + " " + movie_title);
+            return green(Math.floor(imdb_score));    
+            }      
+        } 
+      });
+    }
+
+    function drawMap(geoJeon) {
+      let scoreVsCountry = getMapConfig("#scoreVsCountry");
+      let projection = getMapProjection(scoreVsCountry);
+      drawBaseMap(scoreVsCountry.container, geoJeon.features, projection,'scoreVsCountry');
+    }
+
     </script>
 </html>
