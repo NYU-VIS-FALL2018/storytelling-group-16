@@ -5,21 +5,47 @@
             <link rel='stylesheet' href='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css'>
             <script src='https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js'></script>
             <script src='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js'></script>
+            <style>
+                * {
+                    font-family: "Times New Roman", Times, serif;
+                    font-size: 20px;
+                    text-align: justify;
+                }
+            </style>
     </head>
     <body>
 
         <div class='container'>
-
             <div class='row'>
-                <h2>The IMDB dataset is fascinating because it is allowing us to observe some general trends about movies. A movie's performance depends on a plethora of factors, and we will observe a few of them today.</h2>
-                <h2>First, we observed that it's not just the content of the movie, but also its origins that affect its rating.</h2> 
-                <h2>As shown below, we can see that movies from some parts of the world
-                and some languages do better than others.</h2>
+                <h1> IMDB MOVIE DATASET ANALYSIS </h1>
             </div>
             <div class='row'>
-                <div class='col-md-12'>
+                <p>  The IMDB dataset is fascinating because it is allowing us to observe some general trends about movies. A movie's performance depends on a plethora of factors, and we will observe a few of them today. First, we observed that it's not just the content of the movie, but also its origins that affect its rating. As shown below, we can see that movies from some parts of the world
+                and some languages do better than others.</p>
+            </div><br>
+            <div class='row'>
+                <div class='col-md-5'>
+                    <p> Shown on the right is a choloropleth map showing how the IMDB score varies by countries. </p>
+                </div>
+                <div class='col-md-7'>
                     <svg = id='scoreVsCountry'></svg>
-                </div>      
+                </div>   
+            </div>
+            <div class='row'>  
+                <div class='col-md-5'>
+                    <p> Here, we have visualized the countries based on the amount of money they have made. </p>
+                </div>
+                <div class='col-md-7'> 
+                    <svg = id='grossVsCountry'></svg>
+                </div>
+            </div>
+            <div class='row'>  
+                <div class='col-md-5'>
+                    <p> Finally, we visualized the countries based on the average budget of the movies. </p>
+                </div>
+                <div class='col-md-7'> 
+                    <svg = id='budgetVsCountry'></svg>
+                </div>
             </div>
         </div>
     </body>
@@ -32,30 +58,37 @@
             d3.csv("movie_metadata.csv"),
             d3.json("contries.geo.json"),
         ]).then(datasets => {
-            movieData.movies = getGrouped(datasets[0]);
-            console.log(getGrouped(datasets[0]));
+            movieData.imdb_score_country = fixData(getGrouped(datasets[0],'country','imdb_score'));
+            movieData.gross = fixData(getGrouped(datasets[0],'country','gross'));
             movieData.geoJSON = datasets[1]
             return movieData;
         })
     }
 
-    function getGrouped(data){
+    function getGrouped(data, groupBy, groupQuantity){
       var grouped = d3.nest()
-      .key(function(d) { return d.country; })
-      .rollup(function(d){return d3.mean(d,function(x){return x.imdb_score;})})
+      .key(function(d) { return d[groupBy]; })
+      .rollup(function(d){return d3.mean(d,function(x){return x[groupQuantity];})})
       .entries(data);
       return grouped;
     }
 
-    function showData() {
-      let movies = movieData.movies;
-      drawMap(movieData.geoJSON);
+    function fixData(data){
+        return data.sort(function(a,b){
+            return d3.ascending(a.value,b.value);
+        });
     }
 
-    loadData().then(showData);
+    function showData() {
+      drawMap(movieData.geoJSON,'scoreVsCountry', movieData.imdb_score_country, 'blue');
+      drawMap(movieData.geoJSON,'grossVsCountry', movieData.gross, 'green');
+      drawMap(movieData.geoJSON,'budgetVsCountry', movieData.gross, 'red');
+    }
+
+    
 
     function getMapConfig(id){
-      let width = 800;
+      let width = 600;
       let height = 400;
       let container = d3.select(id).attr('width',width).attr('height',height); 
       return {width, height, container}
@@ -69,34 +102,38 @@
       return projection;
     }
 
-    function drawBaseMap(container, countries, projection,type){
-    let blue = d3.scalePow().exponent(2).domain([0,9.5]).range(['white','#0059b3']);
-    let path = d3.geoPath().projection(projection);
-    d3.functor = function functor(v) {
-          return typeof v === "function" ? v : function() {
-            return v;
-          };
-        };
+    function drawBaseMap(container, countries, projection,type, feature, color){
 
-    container.selectAll("path").data(countries)
-        .enter().append("path")
-        .attr("d",path)
-        .attr("stroke", "white")
-        .attr("fill", function(d){
-        for(var i = 0; i<movieData.movies.length; i++){
-          if(movieData.movies[i].key === d.properties.name){
-            let imdb_score = movieData.movies[i].value;
-            return blue(Math.floor(imdb_score));    
-            }      
-        } 
+
+    var min = feature[0].value; 
+    var max = feature[feature.length - 1].value; 
+
+    let shade = d3.scaleLinear().domain([min, max]).range(['white', color]);
+
+
+    let path = d3.geoPath().projection(projection);
+
+    container.selectAll('path').data(countries)
+        .enter().append('path')
+        .attr('d',path)
+        .attr("stroke", 'white')
+        .attr('fill', function(d){
+            for(var i = 0; i< feature.length; i++){
+                if(feature[i].key === d.properties.name){
+                    return shade(Math.floor(feature[i].value));    
+                }      
+            } 
         });
     }
 
-    function drawMap(geoJeon) {
-      let scoreVsCountry = getMapConfig("#scoreVsCountry");
-      let projection = getMapProjection(scoreVsCountry);
-      drawBaseMap(scoreVsCountry.container, geoJeon.features, projection,'scoreVsCountry');
+    function drawMap(geoJeon, id, data, color) {
+      let mapConfig = getMapConfig('#'+id);
+      let projection = getMapProjection(mapConfig);
+      drawBaseMap(mapConfig.container, geoJeon.features, projection, id, data, color);
     }
+
+    loadData().then(showData);
+
 
     </script>
 </html>
