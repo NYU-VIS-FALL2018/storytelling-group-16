@@ -22,7 +22,7 @@
             <div class='row'>
                 <p>  The IMDB dataset is fascinating because it is allowing us to observe some general trends about movies. A movie's performance depends on a plethora of factors, and we will observe a few of them today. First, we observed that it's not just the content of the movie, but also its origins that affect its rating. As shown below, we can see that movies from some parts of the world
                 and some languages do better than others.</p>
-            </div><br>
+            </div>
             <div class='row'>
                 <div class='col-md-5'>
                     <p> Shown on the right is a choloropleth map showing how the IMDB score varies by countries. </p>
@@ -41,12 +41,44 @@
             </div>
             <div class='row'>  
                 <div class='col-md-5'>
-                    <p> Finally, we visualized the countries based on the average budget of the movies. </p>
+                    <p> Here, we visualized the countries based on the average number of voters for each of the movies. </p>
                 </div>
                 <div class='col-md-7'> 
-                    <svg = id='budgetVsCountry'></svg>
+                    <svg = id='numUsersVsCountry'></svg>
                 </div>
             </div>
+            <div class='row'>  
+                <div class='col-md-5'>
+                    <p> Finally, we visualized the countries based on the average number of facebook likes its movies recieves. </p>
+                </div>
+                <div class='col-md-7'> 
+                    <svg = id='facebookLikesVsCountry'></svg>
+                </div>
+            </div>
+            <div class = 'row'>
+                <p> Now, let's look at how the language of a movie impacts its rating...</p>
+            </div>
+            <div class='row'>
+                <div class='col-md-12'>
+                    <svg id = 'languageByRating'></svg>
+                </div>                
+            </div>
+            <div class = 'row'>
+                <p> It's clear that movies in some languages, like Telugu and Polish, were rated better than movies in other languages. </p>
+            </div>
+
+            <div class = 'row'>
+                <p> People mostly say that movies made in the olden days were better than the ones made today. We observed this hypothesis and concluded that the hypothesis holds true, based on the ratings of movies based on their release date, as shown below </p>
+            </div>
+
+            <div class = 'row'>
+                <p> Since how well a movie is made depends a lot on directors, let's look at some of the best directors out there, based on how hit their movies were - </p>
+            </div>
+            <!--<div class='row'>
+                <div class='col-md-12'>
+                    <svg id ='directorByRating'></svg>
+                </div>
+            </div>-->
         </div>
     </body>
     <script>
@@ -58,23 +90,35 @@
             d3.csv("movie_metadata.csv"),
             d3.json("contries.geo.json"),
         ]).then(datasets => {
-            movieData.imdb_score_country = fixData(getGrouped(datasets[0],'country','imdb_score'));
-            movieData.gross = fixData(getGrouped(datasets[0],'country','gross'));
+            movieData.imdb_score_country = fixData(getGrouped(datasets[0],'country','imdb_score'), 1,0);
+            movieData.gross = fixData(getGrouped(datasets[0],'country','gross'), 0.0000001,1000);
+            movieData.num_voted_users = fixData(getGrouped(datasets[0],'country','num_voted_users'),1,0);
+            movieData.movie_facebook_likes = fixData(getGrouped(datasets[0],'country','movie_facebook_likes'),0.01,1);
+            movieData.language = fixData(getGrouped(datasets[0],'language','imdb_score'),1,1,'descending');
+            movieData.director = fixData(getGrouped(datasets[0],'director_name','imdb_score'),1,1,'descending');
             movieData.geoJSON = datasets[1]
             return movieData;
         })
     }
 
     function getGrouped(data, groupBy, groupQuantity){
-      var grouped = d3.nest()
-      .key(function(d) { return d[groupBy]; })
-      .rollup(function(d){return d3.mean(d,function(x){return x[groupQuantity];})})
-      .entries(data);
-      return grouped;
+
+        var grouped = d3.nest()
+            .key(function(d) { return d[groupBy]; })
+            .rollup(function(d){return d3.mean(d,function(x){return x[groupQuantity];})})
+            .entries(data);
+        return grouped;
     }
 
-    function fixData(data){
+    function fixData(data,scale,smooth,order = 'ascending'){
+        data = data.filter(function(d){ return d.value != 0;});
+        for(var i = 0; i<data.length; i++){
+            data[i].value = (data[i].value + smooth) * scale;
+        }
         return data.sort(function(a,b){
+            if(order == 'descending'){
+                return d3.descending(a.value,b.value);
+            }
             return d3.ascending(a.value,b.value);
         });
     }
@@ -82,7 +126,10 @@
     function showData() {
       drawMap(movieData.geoJSON,'scoreVsCountry', movieData.imdb_score_country, 'blue');
       drawMap(movieData.geoJSON,'grossVsCountry', movieData.gross, 'green');
-      drawMap(movieData.geoJSON,'budgetVsCountry', movieData.gross, 'red');
+      drawMap(movieData.geoJSON,'numUsersVsCountry', movieData.num_voted_users, 'red');
+      drawMap(movieData.geoJSON,'facebookLikesVsCountry', movieData.movie_facebook_likes, 'purple');
+      drawBarChart(movieData.language,'languageByRating');
+      drawBarChart(movieData.director,'directorByRating');
     }
 
     
@@ -104,26 +151,29 @@
 
     function drawBaseMap(container, countries, projection,type, feature, color){
 
+        var min = feature[0].value; 
+        var max = feature[feature.length - 1].value;
+        //let shade = d3.scaleExp().domain([min, max]).range(['white', color]);
+        switch(color){
+            case 'red': interpolator = d3.interpolateReds;  ;break;
+            case 'green': interpolator = d3.interpolateGreens; break;
+            case 'blue': interpolator = d3.interpolateBlues; break;
+            case 'purple': interpolator = d3.interpolatePurples; break;
+        }
+        let shade = d3.scaleSequential().domain([min,max]).interpolator(interpolator);
+        let path = d3.geoPath().projection(projection);
 
-    var min = feature[0].value; 
-    var max = feature[feature.length - 1].value; 
-
-    let shade = d3.scaleLinear().domain([min, max]).range(['white', color]);
-
-
-    let path = d3.geoPath().projection(projection);
-
-    container.selectAll('path').data(countries)
-        .enter().append('path')
-        .attr('d',path)
-        .attr("stroke", 'white')
-        .attr('fill', function(d){
-            for(var i = 0; i< feature.length; i++){
-                if(feature[i].key === d.properties.name){
-                    return shade(Math.floor(feature[i].value));    
-                }      
-            } 
-        });
+        container.selectAll('path').data(countries)
+            .enter().append('path')
+            .attr('d',path)
+            .attr("stroke", 'white')
+            .attr('fill', function(d){
+                for(var i = 0; i< feature.length; i++){
+                    if(feature[i].key === d.properties.name){
+                        return shade(Math.floor(feature[i].value));    
+                    }      
+                } 
+            });
     }
 
     function drawMap(geoJeon, id, data, color) {
@@ -134,6 +184,38 @@
 
     loadData().then(showData);
 
+
+    function drawBarChart(data,id) {
+
+        margin = {top: 50, right: 50, bottom: 100, left: 50},
+        width = 0.85*window.innerWidth - margin.left - margin.right,
+        height = 600 - margin.top - margin.bottom; 
+
+        var svg = d3.select('#'+id).attr('width',width + margin.left + margin.right).attr('height', height + margin.top + margin.bottom).append('g').attr('transform',"translate("+margin.left+","+margin.top+")");
+
+        var xScale = d3.scaleBand().domain(data.map(function(d){return d.key;})).range([0,width]);
+        var yScale = d3.scaleLinear().domain([0, data[0].value]).range([height,0]);
+
+        svg.selectAll('.bar')
+            .data(data)
+            .enter().append('rect')
+            .attr('class','bar')
+            .attr('x', function(d){return xScale(d.key);})
+            .attr('width',xScale.bandwidth() - 5)
+            .attr('y',function(d){return yScale(d.value);})
+            .attr('height',function(d){return height - yScale(d.value);})
+            .style("margin-left",function(d){return '10px';})
+            .style('fill','rgb(73, 150, 255)');
+
+        svg.append('g').attr('transform',"translate(0,"+height+")").call(d3.axisBottom(xScale)).selectAll("text")
+            .attr("x", 0)
+            .attr("dy", ".35em")
+            .attr("transform", "rotate(75)")
+            .style("text-anchor", "start")
+            .attr('font-size','4px'); 
+        svg.append('g').call(d3.axisLeft(yScale));
+          
+    }
 
     </script>
 </html>
