@@ -45,7 +45,7 @@
             </div>
             <div class='row'>  
                 <div class='col-md-5'>
-                    <p> Here, we have visualized the countries based on the amount of money they have made. </p>
+                    <p> Here, we have visualized the countries based on the amount of money their movies have made (in millions). </p>
                 </div>
                 <div class='col-md-7'> 
                     <svg = id='grossVsCountry'></svg>
@@ -104,9 +104,9 @@
             d3.json("contries.geo.json"),
         ]).then(datasets => {
             movieData.imdb_score_country = fixData(getGrouped(datasets[0],'country','imdb_score'), 1,0);
-            movieData.gross = fixData(getGrouped(datasets[0],'country','gross'), 0.0000001,1000);
+            movieData.gross = fixData(getGrouped(datasets[0],'country','gross'), 0.000001,1000);
             movieData.num_voted_users = fixData(getGrouped(datasets[0],'country','num_voted_users'),1,0);
-            movieData.movie_facebook_likes = fixData(getGrouped(datasets[0],'country','movie_facebook_likes'),0.01,1);
+            movieData.movie_facebook_likes = fixData(getGrouped(datasets[0],'country','movie_facebook_likes'),1,1);
             movieData.language = fixData(getGrouped(datasets[0],'language','imdb_score'),1,1,'descending');
             movieData.director = fixData(getGrouped(datasets[0],'director_name','imdb_score'),1,1,'descending');
             movieData.geoJSON = datasets[1]
@@ -195,7 +195,7 @@
                 }                
                 
             })
-            .on('mouseleave', (d) => d3.select('#tooltip').style('display','none').style('z-index','2'));
+            .on('mouseleave', (d) => d3.select('#tooltip').style('display','none').style('z-index','0'));
     }
 
     function drawMap(geoJeon, id, data, color) {
@@ -216,7 +216,7 @@
         var svg = d3.select('#'+id).attr('width',width + margin.left + margin.right).attr('height', height + margin.top + margin.bottom).append('g').attr('transform',"translate("+margin.left+","+margin.top+")");
 
         var xScale = d3.scaleBand().domain(data.map(function(d){return d.key;})).range([0,width]);
-        var yScale = d3.scaleLinear().domain([0, data[0].value]).range([height,0]);
+        var yScale = d3.scalePow().exponent(2.5).domain([0, data[0].value]).range([height,0]);
 
         svg.selectAll('.bar')
             .data(data)
@@ -248,8 +248,11 @@
             .style('left',coordinates[0]+'px')
             .style('display','block')
             .style('z-index','2')
-            .style('cursor','pointer');
+            .style('cursor','pointer')
+            .style('pointer-events','none');
     }
+
+
 
     </script>
 </html>
