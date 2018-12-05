@@ -22,7 +22,6 @@
                     border-radius: 2px;
                 }
 
-
             </style>
     </head>
     <body>
@@ -82,16 +81,22 @@
             <div class = 'row'>
                 <p> People mostly say that movies made in the olden days were better than the ones made today. We observed this hypothesis and concluded that the hypothesis holds true, based on the ratings of movies based on their release date, as shown below </p>
             </div>
+            <div class='row'>
+                <svg id='ratingVsTime'></svg>
+            </div>
 
             <div class = 'row'>
                 <p> Since how well a movie is made depends a lot on directors, let's look at some of the best directors out there, based on how hit their movies were - </p>
             </div>
-            <!--<div class='row'>
+            <div class='row'>
                 <div class='col-md-12'>
                     <svg id ='directorByRating'></svg>
                 </div>
-            </div>-->
-
+            </div>
+            <div class='row'>
+                <div class='col-md-12'>
+                </div>
+            </div>
         </div>
     </body>
     <script>
@@ -103,37 +108,49 @@
             d3.csv("movie_metadata.csv"),
             d3.json("contries.geo.json"),
         ]).then(datasets => {
-            movieData.imdb_score_country = fixData(getGrouped(datasets[0],'country','imdb_score'), 1,0);
-            movieData.gross = fixData(getGrouped(datasets[0],'country','gross'), 0.000001,1000);
-            movieData.num_voted_users = fixData(getGrouped(datasets[0],'country','num_voted_users'),1,0);
-            movieData.movie_facebook_likes = fixData(getGrouped(datasets[0],'country','movie_facebook_likes'),1,1);
-            movieData.language = fixData(getGrouped(datasets[0],'language','imdb_score'),1,1,'descending');
-            movieData.director = fixData(getGrouped(datasets[0],'director_name','imdb_score'),1,1,'descending');
+            movieData.imdb_score_country = fixData(getGrouped(datasets[0],{groupBy:'country',groupQuantity:'imdb_score'}),{});
+            movieData.gross = fixData(getGrouped(datasets[0],{groupBy:'country',groupQuantity:'gross'}),{scale:0.000001,smooth:1000});
+            movieData.num_voted_users = fixData(getGrouped(datasets[0],{groupBy:'country',groupQuantity:'num_voted_users'}), {});
+            movieData.movie_facebook_likes = fixData(getGrouped(datasets[0],{groupBy:'country',groupQuantity:'movie_facebook_likes'}), {});
+            movieData.language = fixData(getGrouped(datasets[0],{groupBy:'language',groupQuantity:'imdb_score'}),{order:'descending'});
+            movieData.director = fixData(getGrouped(datasets[0],{groupBy:'director_name',groupQuantity:'imdb_score'}),{order:'descending',limit:40});
+            movieData.title_year = fixData(getGrouped(datasets[0],{groupBy:'title_year',groupQuantity:'imdb_score'}),{});       
             movieData.geoJSON = datasets[1]
             return movieData;
         })
     }
 
-    function getGrouped(data, groupBy, groupQuantity){
+    function getGrouped(data, params){
 
         var grouped = d3.nest()
-            .key(function(d) { return d[groupBy]; })
-            .rollup(function(d){return d3.mean(d,function(x){return x[groupQuantity];})})
+            .key(function(d) { return d[params.groupBy]; })
+            .rollup(function(d){
+                return d3.mean(d,function(x){return x[params.groupQuantity];})
+            })
             .entries(data);
         return grouped;
     }
 
-    function fixData(data,scale,smooth,order = 'ascending'){
-        data = data.filter(function(d){ return d.value != 0;});
+    function fixData(data, params){
+
+        if(params.scale == undefined){params.scale = 1;}
+        if(params.smooth == undefined){params.smooth = 0;}
+        if(params.order == undefined){params.order = 'ascending';}
+        if(params.limit == undefined){params.limit = data.length;}
+
         for(var i = 0; i<data.length; i++){
-            data[i].value = (data[i].value + smooth) * scale;
+            data[i].value = (data[i].value + params.smooth) * params.scale;
         }
+
+        data = data.filter(function(d){ return d.value != 0 && d.key != "";});
         return data.sort(function(a,b){
-            if(order == 'descending'){
+            if(params.order == 'descending'){
                 return d3.descending(a.value,b.value);
             }
             return d3.ascending(a.value,b.value);
-        });
+        }).slice(0, params.limit);;
+
+
     }
 
     function showData() {
@@ -143,6 +160,7 @@
       drawMap(movieData.geoJSON,'facebookLikesVsCountry', movieData.movie_facebook_likes, 'purple');
       drawBarChart(movieData.language,'languageByRating');
       drawBarChart(movieData.director,'directorByRating');
+      drawLineChart(movieData.title_year, 'ratingVsTime');
     }
 
     
@@ -216,7 +234,10 @@
         var svg = d3.select('#'+id).attr('width',width + margin.left + margin.right).attr('height', height + margin.top + margin.bottom).append('g').attr('transform',"translate("+margin.left+","+margin.top+")");
 
         var xScale = d3.scaleBand().domain(data.map(function(d){return d.key;})).range([0,width]);
-        var yScale = d3.scalePow().exponent(2.5).domain([0, data[0].value]).range([height,0]);
+        var min = data[0].value; 
+        var max = data[data.length - 1].value;
+        var yScale = d3.scalePow().exponent(2).domain([0, data[0].value]).range([height,0]);
+        let shade = d3.scaleSequential().domain([min,max]).interpolator(d3.interpolateCool);
 
         svg.selectAll('.bar')
             .data(data)
@@ -227,7 +248,7 @@
             .attr('y',function(d){return yScale(d.value);})
             .attr('height',function(d){return height - yScale(d.value);})
             .style("margin-left",function(d){return '10px';})
-            .style('fill','rgb(73, 150, 255)')
+            .style('fill',function(d){return shade(d.value);})
             .on('mouseenter', (d) => showToolTip([d.key, d.value.toFixed(2)],[d3.event.pageX, d3.event.pageY]))
             .on('mouseleave', (d) => d3.select('#tooltip').style('display','none').style('z-index','2'));
 
@@ -241,6 +262,67 @@
           
     }
 
+    function drawLineChart(data,id){
+
+        margin = {top: 50, right: 50, bottom: 100, left: 50},
+        width = 0.85*window.innerWidth - margin.left - margin.right,
+        height = 600 - margin.top - margin.bottom; 
+
+        var parseTime = d3.timeParse("%Y");
+
+
+        data.forEach(function(d){
+            d.key = parseTime(+d.key);
+        });
+
+        data = data.sort(function(a,b){
+            return d3.ascending(a.key,b.key);
+        });
+
+
+        var svg = d3.select('#'+id).attr('width',width + margin.left + margin.right).attr('height', height + margin.top + margin.bottom).append('g').attr('transform',"translate("+margin.left+","+margin.top+")");
+
+
+        var xScale = d3.scaleTime().domain(d3.extent(data,function(d){return d.key;})).range([0,width]);
+
+        var yScale = d3.scaleLinear().domain([0, data[0].value]).range([height,0]);
+
+        var valueline = d3.line()
+            .x(function(d) { return xScale(d.key); })
+            .y(function(d) { return yScale(d.value); })
+            .curve(d3.curveMonotoneX);
+
+        svg.append('path')
+          .attr('class', 'line')
+          .datum(data)
+          .attr('d', valueline)
+          .style('fill','none')
+          .style('stroke','blue');
+
+        svg.selectAll('.dot')
+            .data(data)
+            .enter().append('circle') 
+            .attr('class', 'dot') 
+            .attr('cx', function(d) { return xScale(d.key) })
+            .attr('cy', function(d) { return yScale(d.value) })
+            .attr("r", 2)
+            .style('fill','none')
+            .style('stroke','blue')
+            .on('mouseenter', (d) => showToolTip([d.key.getFullYear(), d.value.toFixed(2)],[d3.event.pageX, d3.event.pageY]))
+            .on('mouseleave', (d) => d3.select('#tooltip').style('display','none').style('z-index','2'));
+
+        svg.append('g').attr('transform',"translate(0,"+height+")")
+            .call(d3.axisBottom(xScale).tickFormat(d3.timeFormat("%Y")))
+            .selectAll("text")
+            .attr("x", 0)
+            .attr("dy", ".35em")
+            .attr("transform", "rotate(75)")
+            .style("text-anchor", "start")
+            .attr('font-size','2px'); 
+
+        svg.append('g').call(d3.axisLeft(yScale));
+    }
+
     function showToolTip(value, coordinates){
         d3.select('#tooltip')
             .html("<p><strong>"+value[0]+"</strong></p><p>"+value[1]+"</p>")
@@ -251,8 +333,6 @@
             .style('cursor','pointer')
             .style('pointer-events','none');
     }
-
-
 
     </script>
 </html>
