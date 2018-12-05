@@ -11,10 +11,22 @@
                     font-size: 20px;
                     text-align: justify;
                 }
+
+                #tooltip{
+                    position: absolute;
+                    display: none;
+                    line-height: 1;
+                    padding: 5px;
+                    background: rgba(0, 0, 0, 0.8);
+                    color: #fff;
+                    border-radius: 2px;
+                }
+
+
             </style>
     </head>
     <body>
-
+        <div id='tooltip'></div>
         <div class='container'>
             <div class='row'>
                 <h1> IMDB MOVIE DATASET ANALYSIS </h1>
@@ -79,6 +91,7 @@
                     <svg id ='directorByRating'></svg>
                 </div>
             </div>-->
+
         </div>
     </body>
     <script>
@@ -173,7 +186,16 @@
                         return shade(Math.floor(feature[i].value));    
                     }      
                 } 
-            });
+            })
+            .on('mouseenter', function(d){
+                for(var i = 0; i< feature.length; i++){
+                    if(feature[i].key === d.properties.name){
+                        showToolTip([feature[i].key, feature[i].value.toFixed(2)],[d3.event.pageX, d3.event.pageY])   
+                    }      
+                }                
+                
+            })
+            .on('mouseleave', (d) => d3.select('#tooltip').style('display','none').style('z-index','2'));
     }
 
     function drawMap(geoJeon, id, data, color) {
@@ -205,7 +227,9 @@
             .attr('y',function(d){return yScale(d.value);})
             .attr('height',function(d){return height - yScale(d.value);})
             .style("margin-left",function(d){return '10px';})
-            .style('fill','rgb(73, 150, 255)');
+            .style('fill','rgb(73, 150, 255)')
+            .on('mouseenter', (d) => showToolTip([d.key, d.value.toFixed(2)],[d3.event.pageX, d3.event.pageY]))
+            .on('mouseleave', (d) => d3.select('#tooltip').style('display','none').style('z-index','2'));
 
         svg.append('g').attr('transform',"translate(0,"+height+")").call(d3.axisBottom(xScale)).selectAll("text")
             .attr("x", 0)
@@ -215,6 +239,16 @@
             .attr('font-size','4px'); 
         svg.append('g').call(d3.axisLeft(yScale));
           
+    }
+
+    function showToolTip(value, coordinates){
+        d3.select('#tooltip')
+            .html("<p><strong>"+value[0]+"</strong></p><p>"+value[1]+"</p>")
+            .style('top', coordinates[1] +'px')
+            .style('left',coordinates[0]+'px')
+            .style('display','block')
+            .style('z-index','2')
+            .style('cursor','pointer');
     }
 
     </script>
