@@ -26,6 +26,8 @@ Movie_title - The name of the movie. (Categorical)
 Plot_keywords - Some words used to describe a movie (Categorical).
 Dataset Link - ( https://www.kaggle.com/carolzhangdc/imdb-5000-movie-dataset )
 
+![Alt text](barGraph.PNG?raw=true "Bar Graph")
+![Alt text](choropleth.PNG?raw=true "Map")
 ![Alt text](lineChart.PNG?raw=true "Line Chart")
 
 ## More
