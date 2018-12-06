@@ -89,8 +89,11 @@
                 <p> Since how well a movie is made depends a lot on directors, let's look at some of the best directors out there, based on how hit their movies were and how well their movies are rated. </p>
             </div>
             <div class='row'>
-                <div class='col-md-12'>
+                <div class='col-md-6'>
                     <svg id ='directorByRating'></svg>
+                </div>
+                <div class='col-md-6'>
+                    <svg id ='directorByHit'></svg>
                 </div>
             </div>
             <div class = 'row'>
@@ -123,6 +126,8 @@
             movieData.language = fixData(getGrouped(datasets[0],{groupBy:'language',groupQuantity:'imdb_score'}),{order:'descending'});
             movieData.director = fixData(getGrouped(datasets[0],{groupBy:'director_name',groupQuantity:'imdb_score'}),{order:'descending',limit:40});
             movieData.title_year = fixData(getGrouped(datasets[0],{groupBy:'title_year',groupQuantity:'imdb_score'}),{});   
+            movieData.hitRatioDir = fixData(getGrouped(datasets[0],{groupBy:'director_name',groupQuantity:'gross',gq2:'budget'}),{order:'descending',limit:40,scale:0.000001});
+            console.log(movieData.hitRatioDir);
             movieData.geoJSON = datasets[1];
             return movieData;
         })
@@ -133,7 +138,10 @@
         var grouped = d3.nest()
             .key(function(d) { return d[params.groupBy]; })
             .rollup(function(d){
-                return d3.mean(d,function(x){return x[params.groupQuantity];})
+
+                return d3.mean(d,function(x){
+                    if(params.gq2 == undefined){mul = 0;}
+                    return x[params.groupQuantity] - mul;})
             })
             .entries(data);
         return grouped;
@@ -166,8 +174,9 @@
       drawMap(movieData.geoJSON,'grossVsCountry', movieData.gross, 'green');
       drawMap(movieData.geoJSON,'numUsersVsCountry', movieData.num_voted_users, 'red');
       drawMap(movieData.geoJSON,'facebookLikesVsCountry', movieData.movie_facebook_likes, 'purple');
-      drawBarChart(movieData.language,'languageByRating');
-      drawBarChart(movieData.director,'directorByRating');
+      drawBarChart(movieData.language,'languageByRating',0.85);
+      drawBarChart(movieData.director,'directorByRating',0.45);
+      drawBarChart(movieData.hitRatioDir,'directorByHit',0.45);
       drawLineChart(movieData.title_year, 'ratingVsTime');
       drawScatterPlot(movieData.all,'scoreVsbudget',['imdb_score','budget'],{color:'red',title:'BUDGET VS IMDB SCORE'});
       drawScatterPlot(movieData.all,'scoreVsGross',['imdb_score','gross'],{color:'green',title:'GROSS AMOUNT VS IMDB SCORE'});
@@ -235,10 +244,10 @@
     loadData().then(showData);
 
 
-    function drawBarChart(data,id) {
+    function drawBarChart(data,id,widthWeight) {
 
         margin = {top: 50, right: 50, bottom: 150, left: 50},
-        width = 0.85*window.innerWidth - margin.left - margin.right,
+        width = widthWeight*window.innerWidth - margin.left - margin.right,
         height = 600 - margin.top - margin.bottom; 
 
         var svg = d3.select('#'+id).attr('width',width + margin.left + margin.right).attr('height', height + margin.top + margin.bottom).append('g').attr('transform',"translate("+margin.left+","+margin.top+")");
@@ -267,6 +276,7 @@
             .attr("dy", ".35em")
             .attr("transform", "rotate(75)")
             .style("text-anchor", "start")
+            .attr('font-size','5px')
             .attr('font-size','4px'); 
         svg.append('g').call(d3.axisLeft(yScale));
           
