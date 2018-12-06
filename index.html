@@ -86,15 +86,22 @@
             </div>
 
             <div class = 'row'>
-                <p> Since how well a movie is made depends a lot on directors, let's look at some of the best directors out there, based on how hit their movies were - </p>
+                <p> Since how well a movie is made depends a lot on directors, let's look at some of the best directors out there, based on how hit their movies were and how well their movies are rated. </p>
             </div>
             <div class='row'>
                 <div class='col-md-12'>
                     <svg id ='directorByRating'></svg>
                 </div>
             </div>
+            <div class = 'row'>
+                <p> Speaking of quality, we would like to see if spending more money on a movie equates to better ratings. We would also like to see if the amount of money a movie makes has any relation with its quality. Based on the visualizations shown below, its clear that the rating of a movie is positively correlated to the money spent on it. This indicates that the more money a film maker spends on a movie, more the chances are that it would be rated well and inferentially, better would be its box office collections.  </p>
+            </div>
             <div class='row'>
-                <div class='col-md-12'>
+                <div class='col-md-6'>
+                    <svg id='scoreVsbudget'></svg>
+                </div>
+                <div class='col-md-6'>
+                    <svg id='scoreVsGross'></svg>
                 </div>
             </div>
         </div>
@@ -108,14 +115,15 @@
             d3.csv("movie_metadata.csv"),
             d3.json("contries.geo.json"),
         ]).then(datasets => {
+            movieData.all = datasets[0];
             movieData.imdb_score_country = fixData(getGrouped(datasets[0],{groupBy:'country',groupQuantity:'imdb_score'}),{});
             movieData.gross = fixData(getGrouped(datasets[0],{groupBy:'country',groupQuantity:'gross'}),{scale:0.000001,smooth:1000});
             movieData.num_voted_users = fixData(getGrouped(datasets[0],{groupBy:'country',groupQuantity:'num_voted_users'}), {});
             movieData.movie_facebook_likes = fixData(getGrouped(datasets[0],{groupBy:'country',groupQuantity:'movie_facebook_likes'}), {});
             movieData.language = fixData(getGrouped(datasets[0],{groupBy:'language',groupQuantity:'imdb_score'}),{order:'descending'});
             movieData.director = fixData(getGrouped(datasets[0],{groupBy:'director_name',groupQuantity:'imdb_score'}),{order:'descending',limit:40});
-            movieData.title_year = fixData(getGrouped(datasets[0],{groupBy:'title_year',groupQuantity:'imdb_score'}),{});       
-            movieData.geoJSON = datasets[1]
+            movieData.title_year = fixData(getGrouped(datasets[0],{groupBy:'title_year',groupQuantity:'imdb_score'}),{});   
+            movieData.geoJSON = datasets[1];
             return movieData;
         })
     }
@@ -161,6 +169,8 @@
       drawBarChart(movieData.language,'languageByRating');
       drawBarChart(movieData.director,'directorByRating');
       drawLineChart(movieData.title_year, 'ratingVsTime');
+      drawScatterPlot(movieData.all,'scoreVsbudget',['imdb_score','budget'],{color:'red',title:'BUDGET VS IMDB SCORE'});
+      drawScatterPlot(movieData.all,'scoreVsGross',['imdb_score','gross'],{color:'green',title:'GROSS AMOUNT VS IMDB SCORE'});
     }
 
     
@@ -227,7 +237,7 @@
 
     function drawBarChart(data,id) {
 
-        margin = {top: 50, right: 50, bottom: 100, left: 50},
+        margin = {top: 50, right: 50, bottom: 150, left: 50},
         width = 0.85*window.innerWidth - margin.left - margin.right,
         height = 600 - margin.top - margin.bottom; 
 
@@ -322,6 +332,51 @@
 
         svg.append('g').call(d3.axisLeft(yScale));
     }
+
+    function drawScatterPlot(data,id,keys,params){
+
+        switch(params.color){
+            case 'red': clr = 'red'; break;
+            case 'green': clr = 'green'; break;
+        }
+
+        margin = {top: 50, right: 50, bottom: 100, left: 50},
+        width = 0.45*window.innerWidth - margin.left - margin.right,
+        height = 600 - margin.top - margin.bottom; 
+
+        var svg = d3.select('#'+id).attr('width',width + margin.left + margin.right).attr('height', height + margin.top + margin.bottom).append('g').attr('transform',"translate("+margin.left+","+margin.top+")");
+
+        var xScale = d3.scaleLinear().domain([0,600]).range([0,width]);
+        var yScale = d3.scaleLinear().domain([0, 10]).range([height,0]);
+
+        svg.selectAll('.dot')
+            .data(data)
+            .enter().append('circle') 
+            .attr('class', 'dot') 
+            .attr('cx', function(d) { return xScale(d[keys[1]]/1000000); })
+            .attr('cy', function(d) { return yScale(d[keys[0]]); })
+            .attr("r", 1.5)
+            .style('fill','none')
+            .style('stroke', clr)
+
+        svg.append('g').attr('transform',"translate(0,"+height+")")
+            .call(d3.axisBottom(xScale))
+            .selectAll("text")
+            .attr("x", 0)
+            .attr("dy", ".35em")
+            .attr("transform", "rotate(75)")
+            .style("text-anchor", "start")
+            .attr('font-size','2px'); 
+
+        svg.append('g').call(d3.axisLeft(yScale));  
+
+        svg.append('text')
+        .attr('x', (width / 2))             
+        .attr('y', 0 - (margin.top / 2))
+        .attr('text-anchor', 'middle')  
+        .text(params.title);      
+    }
+
 
     function showToolTip(value, coordinates){
         d3.select('#tooltip')
