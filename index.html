@@ -125,9 +125,8 @@
             movieData.movie_facebook_likes = fixData(getGrouped(datasets[0],{groupBy:'country',groupQuantity:'movie_facebook_likes'}), {});
             movieData.language = fixData(getGrouped(datasets[0],{groupBy:'language',groupQuantity:'imdb_score'}),{order:'descending'});
             movieData.director = fixData(getGrouped(datasets[0],{groupBy:'director_name',groupQuantity:'imdb_score'}),{order:'descending',limit:40});
-            movieData.title_year = fixData(getGrouped(datasets[0],{groupBy:'title_year',groupQuantity:'imdb_score'}),{});   
+            movieData.title_year = fixData(getGrouped(datasets[0],{groupBy:'title_year',groupQuantity:'imdb_score'}),{order:'descending'});   
             movieData.hitRatioDir = fixData(getGrouped(datasets[0],{groupBy:'director_name',groupQuantity:'gross',gq2:'budget'}),{order:'descending',limit:40,scale:0.000001});
-            console.log(movieData.hitRatioDir);
             movieData.geoJSON = datasets[1];
             return movieData;
         })
@@ -137,6 +136,7 @@
 
         var grouped = d3.nest()
             .key(function(d) { return d[params.groupBy]; })
+            .key(function(d){return d[params.groupBy2];} )
             .rollup(function(d){
 
                 return d3.mean(d,function(x){
@@ -165,7 +165,6 @@
             }
             return d3.ascending(a.value,b.value);
         }).slice(0, params.limit);;
-
 
     }
 
@@ -203,7 +202,7 @@
 
         var min = feature[0].value; 
         var max = feature[feature.length - 1].value;
-        //let shade = d3.scaleExp().domain([min, max]).range(['white', color]);
+
         switch(color){
             case 'red': interpolator = d3.interpolateReds;  ;break;
             case 'green': interpolator = d3.interpolateGreens; break;
@@ -290,10 +289,11 @@
 
         var parseTime = d3.timeParse("%Y");
 
-
         data.forEach(function(d){
             d.key = parseTime(+d.key);
         });
+
+        var max = data[0].value;
 
         data = data.sort(function(a,b){
             return d3.ascending(a.key,b.key);
@@ -305,7 +305,7 @@
 
         var xScale = d3.scaleTime().domain(d3.extent(data,function(d){return d.key;})).range([0,width]);
 
-        var yScale = d3.scaleLinear().domain([0, data[0].value]).range([height,0]);
+        var yScale = d3.scaleLinear().domain([0, max]).range([height,0]);
 
         var valueline = d3.line()
             .x(function(d) { return xScale(d.key); })
@@ -398,6 +398,18 @@
             .style('cursor','pointer')
             .style('pointer-events','none');
     }
+
+    function load(viz){
+        switch(viz){
+            case 'budgetLine': loadData().then(loadBudgetLine); break;
+        }
+        
+    }
+
+    function loadBudgetLine(){
+
+    }
+
 
     </script>
 </html>
