@@ -108,12 +108,26 @@
                 </div>
             </div>
             <div class='row'>
+                <p> Now, lets see if the movie budget and movie gross have any relation with each other. Based on the plot below, its clear that there is no relation observed between the two quantities. We also found no relationship between the number of facebook likes and the IMDB score of a movie.</p>
+            </div>
+            <div class='row'>
                 <div class='col-md-6'>
                     <svg id = 'budgetVsGross'></svg>
                 </div>
                 <div class='col-md-6'>
                     <svg id = 'likesVsScore'></svg>
                 </div>
+            </div>
+            <div class = 'row'>
+                <p> Now lets see how the IMDB ratings are distributed. For this, we will aggregate the number of movies with a particular rating. The results are shown below. </p>
+            </div>
+            <div class='row'>
+                <div class='col-md-12'>
+                    <svg id='imdbYear'></svg>
+                </div>
+            </div>
+            <div class='row'>
+                <p> We can observe a Gaussian Distribution of the ratings. This is a very interesting observation indeed! Our ratings are normally distributed. </p>
             </div>
         </div>
     </body>
@@ -135,6 +149,7 @@
             movieData.director = fixData(getGrouped(datasets[0],{groupBy:'director_name',groupQuantity:'imdb_score'}),{order:'descending',limit:40});
             movieData.title_year = fixData(getGrouped(datasets[0],{groupBy:'title_year',groupQuantity:'imdb_score'}),{order:'descending'});   
             movieData.hitRatioDir = fixData(getGrouped(datasets[0],{groupBy:'director_name',groupQuantity:'gross',gq2:'budget'}),{order:'descending',limit:40,scale:0.000001});
+            movieData.imdbYear = fixData(getGrouped(datasets[0],{groupBy:'imdb_score',groupQuantity:'movie_title',sum:true}),{order:'descending'});
             movieData.geoJSON = datasets[1];
             return movieData;
         })
@@ -147,7 +162,9 @@
             .rollup(function(d){
                 return d3.mean(d,function(x){
                     if(params.gq2 == undefined){mul = 0;}
-                    return x[params.groupQuantity] - mul;})
+                    if(params.sum == undefined){return x[params.groupQuantity] - mul;}
+                    return d.length;
+                    })
             })
             .entries(data);
         return grouped;
@@ -185,7 +202,8 @@
       drawBarChart(movieData.director,'directorByRating',0.45);
       drawBarChart(movieData.hitRatioDir,'directorByHit',0.45);
 
-      drawLineChart(movieData.title_year, 'ratingVsTime');
+      drawLineChart(movieData.title_year, 'ratingVsTime',{date:true,color:'blue'});
+      drawLineChart(movieData.imdbYear, 'imdbYear',{date:false,color:'red'});
 
       drawScatterPlot(movieData.all,'scoreVsbudget',['imdb_score','budget'],{color:'red',title:'BUDGET VS IMDB SCORE'});
       drawScatterPlot(movieData.all,'scoreVsGross',['imdb_score','gross'],{color:'green',title:'GROSS AMOUNT VS IMDB SCORE'});
@@ -293,7 +311,7 @@
           
     }
 
-    function drawLineChart(data,id){
+    function drawLineChart(data,id,params){
 
         margin = {top: 50, right: 50, bottom: 100, left: 50},
         width = 0.85*window.innerWidth - margin.left - margin.right,
@@ -302,22 +320,32 @@
         var parseTime = d3.timeParse("%Y");
 
         data.forEach(function(d){
-            d.key = parseTime(+d.key);
+            if(params.date == true){d.key = parseTime(+d.key);}
+            else{d.key = +d.key;}
         });
 
-        var max = data[0].value;
+        var maxY = data[0].value;
+        var minY = data[data.length - 1].value;
 
         data = data.sort(function(a,b){
             return d3.ascending(a.key,b.key);
         });
 
+        let minX = data[data.length - 1].key;
+        let maxX = data[0].key
+
+        var yScale = d3.scaleLinear().domain([minY, maxY]).range([height,0]);
 
         var svg = d3.select('#'+id).attr('width',width + margin.left + margin.right).attr('height', height + margin.top + margin.bottom).append('g').attr('transform',"translate("+margin.left+","+margin.top+")");
 
+        if(params.date == true){
 
-        var xScale = d3.scaleTime().domain(d3.extent(data,function(d){return d.key;})).range([0,width]);
+            var xScale = d3.scaleTime().domain(d3.extent(data,function(d){return d.key;})).range([0,width]);   
 
-        var yScale = d3.scaleLinear().domain([0, max]).range([height,0]);
+        }else{
+
+            var xScale = d3.scaleLinear().domain([minX,maxX]).range([0,width]);
+        }
 
         var valueline = d3.line()
             .x(function(d) { return xScale(d.key); })
@@ -329,28 +357,50 @@
           .datum(data)
           .attr('d', valueline)
           .style('fill','none')
-          .style('stroke','blue');
+          .style('stroke',params.color);
 
-        svg.selectAll('.dot')
-            .data(data)
-            .enter().append('circle') 
-            .attr('class', 'dot') 
-            .attr('cx', function(d) { return xScale(d.key) })
-            .attr('cy', function(d) { return yScale(d.value) })
-            .attr("r", 2)
-            .style('fill','none')
-            .style('stroke','blue')
-            .on('mouseenter', (d) => showToolTip([d.key.getFullYear(), d.value.toFixed(2)],[d3.event.pageX, d3.event.pageY]))
-            .on('mouseleave', (d) => d3.select('#tooltip').style('display','none').style('z-index','2'));
+        if(params.date == true){
 
-        svg.append('g').attr('transform',"translate(0,"+height+")")
-            .call(d3.axisBottom(xScale).tickFormat(d3.timeFormat("%Y")))
-            .selectAll("text")
-            .attr("x", 0)
-            .attr("dy", ".35em")
-            .attr("transform", "rotate(75)")
-            .style("text-anchor", "start")
-            .attr('font-size','2px'); 
+            svg.selectAll('.dot')
+                .data(data)
+                .enter().append('circle') 
+                .attr('class', 'dot') 
+                .attr('cx', function(d) { return xScale(d.key); })
+                .attr('cy', function(d) { return yScale(d.value); })
+                .attr("r", 2)
+                .style('fill','none')
+                .style('stroke',params.color)
+                .on('mouseenter', (d) => showToolTip([d.key.getFullYear(), d.value.toFixed(2)],[d3.event.pageX, d3.event.pageY]))
+                .on('mouseleave', (d) => d3.select('#tooltip').style('display','none').style('z-index','2'));
+
+            svg.append('g').attr('transform',"translate(0,"+height+")")
+                .call(d3.axisBottom(xScale).tickFormat(d3.timeFormat("%Y")))
+                .selectAll("text")
+                .attr("x", 0)
+                .attr("dy", ".35em")
+                .attr("transform", "rotate(75)")
+                .style("text-anchor", "start")
+                .attr('font-size','2px');             
+            }else{
+
+                svg.selectAll('.dot')
+                    .data(data)
+                    .enter().append('circle') 
+                    .attr('class', 'dot') 
+                    .attr('cx', function(d) { return xScale(d.key); })
+                    .attr('cy', function(d) { return yScale(d.value); })
+                    .attr("r", 2)
+                    .style('fill','none')
+                    .style('stroke',params.color)
+                    .on('mouseenter', (d) => showToolTip([d.key, d.value.toFixed(2)],[d3.event.pageX, d3.event.pageY]))
+                    .on('mouseleave', (d) => d3.select('#tooltip').style('display','none').style('z-index','2'));
+
+                svg.append('g').attr('transform',"translate(0,"+height+")")
+                    .call(d3.axisBottom(xScale))
+                    .selectAll("text")
+                    .remove();                
+            }
+
 
         svg.append('g').call(d3.axisLeft(yScale));
     }
@@ -399,6 +449,14 @@
         .attr('y', 0 - (margin.top / 2))
         .attr('text-anchor', 'middle')  
         .text(params.title);      
+    }
+
+    function drawPieChart(data, id, params){
+
+        let pie = d3.pie().value(function(d){return d.value;});
+        let colorScale = d3.scaleOrdinal().range(d3.schemeCategory10).domain(data.map(function(d){return d.key;}));
+
+
     }
 
 
