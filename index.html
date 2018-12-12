@@ -66,14 +66,17 @@
                     <svg = id='facebookLikesVsCountry'></svg>
                 </div>
             </div>
+
             <div class = 'row'>
                 <p> Now, let's look at how the language of a movie impacts its rating...</p>
             </div>
+
             <div class='row'>
                 <div class='col-md-12'>
                     <svg id = 'languageByRating'></svg>
                 </div>                
             </div>
+
             <div class = 'row'>
                 <p> It's clear that movies in some languages, like Telugu and Polish, were rated better than movies in other languages. </p>
             </div>
@@ -81,8 +84,11 @@
             <div class = 'row'>
                 <p> People mostly say that movies made in the olden days were better than the ones made today. We observed this hypothesis and concluded that the hypothesis holds true, based on the ratings of movies based on their release date, as shown below </p>
             </div>
+
             <div class='row'>
-                <svg id='ratingVsTime'></svg>
+                <div class = 'col-md-12'>
+                    <svg id='ratingVsTime'></svg>
+                </div>
             </div>
 
             <div class = 'row'>
@@ -105,6 +111,19 @@
                 </div>
                 <div class='col-md-6'>
                     <svg id='scoreVsGross'></svg>
+                </div>
+            </div>
+            <div class='row'>
+                <p> We can also infer similar patterns if we plotted a line chart instead, as shown below.</p>
+            </div>
+            <div class='row'>
+                <div class='col-md-12'>
+                    <svg id='imdbVsBudget'></svg>
+                </div>
+            </div>
+            <div class = 'row'>
+                <div class='col-md-12'>
+                    <svg id='imdbVsGross'></svg>
                 </div>
             </div>
             <div class='row'>
@@ -150,6 +169,8 @@
             movieData.title_year = fixData(getGrouped(datasets[0],{groupBy:'title_year',groupQuantity:'imdb_score'}),{order:'descending'});   
             movieData.hitRatioDir = fixData(getGrouped(datasets[0],{groupBy:'director_name',groupQuantity:'gross',gq2:'budget'}),{order:'descending',limit:40,scale:0.000001});
             movieData.imdbYear = fixData(getGrouped(datasets[0],{groupBy:'imdb_score',groupQuantity:'movie_title',sum:true}),{order:'descending'});
+            movieData.imdbBudget = fixData(getGrouped(datasets[0],{groupBy:'imdb_score',groupQuantity:'budget'}),{order:'descending'}); 
+           movieData.imdbGross = fixData(getGrouped(datasets[0],{groupBy:'imdb_score',groupQuantity:'gross'}),{order:'descending'});   
             movieData.geoJSON = datasets[1];
             return movieData;
         })
@@ -193,22 +214,24 @@
 
     function showData() {
 
-      drawMap(movieData.geoJSON,'scoreVsCountry', movieData.imdb_score_country, 'blue');
-      drawMap(movieData.geoJSON,'grossVsCountry', movieData.gross, 'green');
-      drawMap(movieData.geoJSON,'numUsersVsCountry', movieData.num_voted_users, 'red');
-      drawMap(movieData.geoJSON,'facebookLikesVsCountry', movieData.movie_facebook_likes, 'purple');
+        drawMap(movieData.geoJSON,'scoreVsCountry', movieData.imdb_score_country, 'blue');
+        drawMap(movieData.geoJSON,'grossVsCountry', movieData.gross, 'green');
+        drawMap(movieData.geoJSON,'numUsersVsCountry', movieData.num_voted_users, 'red');
+        drawMap(movieData.geoJSON,'facebookLikesVsCountry', movieData.movie_facebook_likes, 'purple');
 
-      drawBarChart(movieData.language,'languageByRating',0.85);
-      drawBarChart(movieData.director,'directorByRating',0.45);
-      drawBarChart(movieData.hitRatioDir,'directorByHit',0.45);
+        drawBarChart(movieData.language,'languageByRating',0.85,{title:'LANGUAGE DISTRIBUTION BY RATING'});
+        drawBarChart(movieData.director,'directorByRating',0.45,{title:'DIRECTORS BY RATING'});
+        drawBarChart(movieData.hitRatioDir,'directorByHit',0.45,{title:'MOST HIT DIRECTORS'});
 
-      drawLineChart(movieData.title_year, 'ratingVsTime',{date:true,color:'blue'});
-      drawLineChart(movieData.imdbYear, 'imdbYear',{date:false,color:'red'});
+        drawLineChart(movieData.title_year, 'ratingVsTime',{date:true,color:'blue',title:' IMDB SCORE BY YEAR'});
+        drawLineChart(movieData.imdbYear, 'imdbYear',{date:false,color:'red',title:'DISTRIBUTION OF IMDB SCORE'});
+        drawLineChart(movieData.imdbBudget, 'imdbVsBudget',{date:false,color:'orange',title:'BUDGET VS IMDB SCORE'});
+        drawLineChart(movieData.imdbGross, 'imdbVsGross',{date:false,color:'green',title:'GROSS VS IMDB SCORE'});
 
-      drawScatterPlot(movieData.all,'scoreVsbudget',['imdb_score','budget'],{color:'red',title:'BUDGET VS IMDB SCORE'});
-      drawScatterPlot(movieData.all,'scoreVsGross',['imdb_score','gross'],{color:'green',title:'GROSS AMOUNT VS IMDB SCORE'});
-      drawScatterPlot(movieData.all,'budgetVsGross',['budget','gross'],{color:'blue',title:'GROSS AMOUNT VS BUDGET AMOUNT'});
-      drawScatterPlot(movieData.all,'likesVsScore',['imdb_score','movie_facebook_likes'],{color:'orange',title:'FACEBOOK LIKES VS IMDB SCORE'});
+        drawScatterPlot(movieData.all,'scoreVsbudget',['imdb_score','budget'],{color:'red',title:'BUDGET VS IMDB SCORE'});
+        drawScatterPlot(movieData.all,'scoreVsGross',['imdb_score','gross'],{color:'green',title:'GROSS AMOUNT VS IMDB SCORE'});
+        drawScatterPlot(movieData.all,'budgetVsGross',['budget','gross'],{color:'blue',title:'GROSS AMOUNT VS BUDGET AMOUNT'});
+        drawScatterPlot(movieData.all,'likesVsScore',['imdb_score','movie_facebook_likes'],{color:'orange',title:'FACEBOOK LIKES VS IMDB SCORE'});
     }
 
     
@@ -273,7 +296,7 @@
     loadData().then(showData);
 
 
-    function drawBarChart(data,id,widthWeight) {
+    function drawBarChart(data,id,widthWeight,params) {
 
         margin = {top: 50, right: 50, bottom: 150, left: 50},
         width = widthWeight*window.innerWidth - margin.left - margin.right,
@@ -308,12 +331,18 @@
             .attr('font-size','5px')
             .attr('font-size','4px'); 
         svg.append('g').call(d3.axisLeft(yScale));
+
+        svg.append('text')
+            .attr('x', (width / 2))             
+            .attr('y', 0 - (margin.top / 2))
+            .attr('text-anchor', 'middle')  
+            .text(params.title);     
           
     }
 
     function drawLineChart(data,id,params){
 
-        margin = {top: 50, right: 50, bottom: 100, left: 50},
+        margin = {top: 50, right: 50, bottom: 100, left: 150},
         width = 0.85*window.innerWidth - margin.left - margin.right,
         height = 600 - margin.top - margin.bottom; 
 
@@ -331,8 +360,8 @@
             return d3.ascending(a.key,b.key);
         });
 
-        let minX = data[data.length - 1].key;
-        let maxX = data[0].key
+        let minX = data[0].key;
+        let maxX = data[data.length - 1].key;
 
         var yScale = d3.scaleLinear().domain([minY, maxY]).range([height,0]);
 
@@ -403,6 +432,12 @@
 
 
         svg.append('g').call(d3.axisLeft(yScale));
+
+        svg.append('text')
+            .attr('x', (width / 2))             
+            .attr('y', 0 - (margin.top / 2))
+            .attr('text-anchor', 'middle')  
+            .text(params.title);     
     }
 
     function drawScatterPlot(data,id,keys,params){
@@ -451,15 +486,6 @@
         .text(params.title);      
     }
 
-    function drawPieChart(data, id, params){
-
-        let pie = d3.pie().value(function(d){return d.value;});
-        let colorScale = d3.scaleOrdinal().range(d3.schemeCategory10).domain(data.map(function(d){return d.key;}));
-
-
-    }
-
-
     function showToolTip(value, coordinates){
         d3.select('#tooltip')
             .html("<p><strong>"+value[0]+"</strong></p><p>"+value[1]+"</p>")
@@ -471,17 +497,6 @@
             .style('pointer-events','none');
     }
 
-    function load(viz){
-        switch(viz){
-            case 'budgetLine': loadData().then(loadBudgetLine); break;
-        }
-        
-    }
-
-    function loadBudgetLine(){
-
-    }
-
-
     </script>
+
 </html>
