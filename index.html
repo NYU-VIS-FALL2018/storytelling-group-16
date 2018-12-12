@@ -107,6 +107,14 @@
                     <svg id='scoreVsGross'></svg>
                 </div>
             </div>
+            <div class='row'>
+                <div class='col-md-6'>
+                    <svg id = 'budgetVsGross'></svg>
+                </div>
+                <div class='col-md-6'>
+                    <svg id = 'likesVsScore'></svg>
+                </div>
+            </div>
         </div>
     </body>
     <script>
@@ -136,9 +144,7 @@
 
         var grouped = d3.nest()
             .key(function(d) { return d[params.groupBy]; })
-            .key(function(d){return d[params.groupBy2];} )
             .rollup(function(d){
-
                 return d3.mean(d,function(x){
                     if(params.gq2 == undefined){mul = 0;}
                     return x[params.groupQuantity] - mul;})
@@ -169,16 +175,22 @@
     }
 
     function showData() {
+
       drawMap(movieData.geoJSON,'scoreVsCountry', movieData.imdb_score_country, 'blue');
       drawMap(movieData.geoJSON,'grossVsCountry', movieData.gross, 'green');
       drawMap(movieData.geoJSON,'numUsersVsCountry', movieData.num_voted_users, 'red');
       drawMap(movieData.geoJSON,'facebookLikesVsCountry', movieData.movie_facebook_likes, 'purple');
+
       drawBarChart(movieData.language,'languageByRating',0.85);
       drawBarChart(movieData.director,'directorByRating',0.45);
       drawBarChart(movieData.hitRatioDir,'directorByHit',0.45);
+
       drawLineChart(movieData.title_year, 'ratingVsTime');
+
       drawScatterPlot(movieData.all,'scoreVsbudget',['imdb_score','budget'],{color:'red',title:'BUDGET VS IMDB SCORE'});
       drawScatterPlot(movieData.all,'scoreVsGross',['imdb_score','gross'],{color:'green',title:'GROSS AMOUNT VS IMDB SCORE'});
+      drawScatterPlot(movieData.all,'budgetVsGross',['budget','gross'],{color:'blue',title:'GROSS AMOUNT VS BUDGET AMOUNT'});
+      drawScatterPlot(movieData.all,'likesVsScore',['imdb_score','movie_facebook_likes'],{color:'orange',title:'FACEBOOK LIKES VS IMDB SCORE'});
     }
 
     
@@ -345,10 +357,6 @@
 
     function drawScatterPlot(data,id,keys,params){
 
-        switch(params.color){
-            case 'red': clr = 'red'; break;
-            case 'green': clr = 'green'; break;
-        }
 
         margin = {top: 50, right: 50, bottom: 100, left: 50},
         width = 0.45*window.innerWidth - margin.left - margin.right,
@@ -356,18 +364,24 @@
 
         var svg = d3.select('#'+id).attr('width',width + margin.left + margin.right).attr('height', height + margin.top + margin.bottom).append('g').attr('transform',"translate("+margin.left+","+margin.top+")");
 
-        var xScale = d3.scaleLinear().domain([0,600]).range([0,width]);
-        var yScale = d3.scaleLinear().domain([0, 10]).range([height,0]);
+        var maxX = d3.max(data,function(d){return d[keys[1]];});
+        var maxY = d3.max(data,function(d){return d[keys[0]];});
+
+        var minX = d3.min(data,function(d){return d[keys[1]];});
+        var minY = d3.min(data,function(d){return d[keys[0]];});
+
+        var xScale = d3.scaleLinear().domain([minX,maxX]).range([0,width]);
+        var yScale = d3.scaleLinear().domain([minY, maxY]).range([height,0]);
 
         svg.selectAll('.dot')
             .data(data)
             .enter().append('circle') 
             .attr('class', 'dot') 
-            .attr('cx', function(d) { return xScale(d[keys[1]]/1000000); })
+            .attr('cx', function(d) { return xScale(d[keys[1]]); })
             .attr('cy', function(d) { return yScale(d[keys[0]]); })
             .attr("r", 1.5)
             .style('fill','none')
-            .style('stroke', clr)
+            .style('stroke', params.color);
 
         svg.append('g').attr('transform',"translate(0,"+height+")")
             .call(d3.axisBottom(xScale))
