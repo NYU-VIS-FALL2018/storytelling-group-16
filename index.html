@@ -36,33 +36,37 @@
             </div>
             <div class='row'>
                 <div class='col-md-5'>
+                    <h2>Country-wise IMDB score</h2>
                     <p> Shown on the right is a choloropleth map showing how the IMDB score varies by countries. </p>
                 </div>
                 <div class='col-md-7'>
                     <svg = id='scoreVsCountry'></svg>
-                </div>   
+                </div>
             </div>
-            <div class='row'>  
+            <div class='row'>
                 <div class='col-md-5'>
+                    <h2>Country-wise box-office earnings</h2>
                     <p> Here, we have visualized the countries based on the amount of money their movies have made (in millions). </p>
                 </div>
-                <div class='col-md-7'> 
+                <div class='col-md-7'>
                     <svg = id='grossVsCountry'></svg>
                 </div>
             </div>
-            <div class='row'>  
+            <div class='row'>
                 <div class='col-md-5'>
+                    <h2>Voter distribution</h2>
                     <p> Here, we visualized the countries based on the average number of voters for each of the movies. </p>
                 </div>
-                <div class='col-md-7'> 
+                <div class='col-md-7'>
                     <svg = id='numUsersVsCountry'></svg>
                 </div>
             </div>
-            <div class='row'>  
+            <div class='row'>
                 <div class='col-md-5'>
+                    <h2>Country-wise distribution of facebook likes</h2>
                     <p> Finally, we visualized the countries based on the average number of facebook likes its movies recieves. </p>
                 </div>
-                <div class='col-md-7'> 
+                <div class='col-md-7'>
                     <svg = id='facebookLikesVsCountry'></svg>
                 </div>
             </div>
@@ -74,7 +78,7 @@
             <div class='row'>
                 <div class='col-md-12'>
                     <svg id = 'languageByRating'></svg>
-                </div>                
+                </div>
             </div>
 
             <div class = 'row'>
@@ -166,11 +170,11 @@
             movieData.movie_facebook_likes = fixData(getGrouped(datasets[0],{groupBy:'country',groupQuantity:'movie_facebook_likes'}), {});
             movieData.language = fixData(getGrouped(datasets[0],{groupBy:'language',groupQuantity:'imdb_score'}),{order:'descending'});
             movieData.director = fixData(getGrouped(datasets[0],{groupBy:'director_name',groupQuantity:'imdb_score'}),{order:'descending',limit:40});
-            movieData.title_year = fixData(getGrouped(datasets[0],{groupBy:'title_year',groupQuantity:'imdb_score'}),{order:'descending'});   
+            movieData.title_year = fixData(getGrouped(datasets[0],{groupBy:'title_year',groupQuantity:'imdb_score'}),{order:'descending'});
             movieData.hitRatioDir = fixData(getGrouped(datasets[0],{groupBy:'director_name',groupQuantity:'gross',gq2:'budget'}),{order:'descending',limit:40,scale:0.000001});
             movieData.imdbYear = fixData(getGrouped(datasets[0],{groupBy:'imdb_score',groupQuantity:'movie_title',sum:true}),{order:'descending'});
-            movieData.imdbBudget = fixData(getGrouped(datasets[0],{groupBy:'imdb_score',groupQuantity:'budget'}),{order:'descending'}); 
-           movieData.imdbGross = fixData(getGrouped(datasets[0],{groupBy:'imdb_score',groupQuantity:'gross'}),{order:'descending'});   
+            movieData.imdbBudget = fixData(getGrouped(datasets[0],{groupBy:'imdb_score',groupQuantity:'budget'}),{order:'descending'});
+           movieData.imdbGross = fixData(getGrouped(datasets[0],{groupBy:'imdb_score',groupQuantity:'gross'}),{order:'descending'});
             movieData.geoJSON = datasets[1];
             return movieData;
         })
@@ -234,26 +238,26 @@
         drawScatterPlot(movieData.all,'likesVsScore',['imdb_score','movie_facebook_likes'],{color:'orange',title:'FACEBOOK LIKES VS IMDB SCORE'});
     }
 
-    
+
 
     function getMapConfig(id){
       let width = 600;
       let height = 400;
-      let container = d3.select(id).attr('width',width).attr('height',height); 
+      let container = d3.select(id).attr('width',width).attr('height',height);
       return {width, height, container}
     }
 
     function getMapProjection(config) {
       let {width, height} = config;
       let projection = d3.geoMercator();
-      projection.scale(100).translate([width/2, height / 1.5 ])           
+      projection.scale(100).translate([width/2, height / 1.5 ])
       movieData.mapProjection = projection;
       return projection;
     }
 
     function drawBaseMap(container, countries, projection,type, feature, color){
 
-        var min = feature[0].value; 
+        var min = feature[0].value;
         var max = feature[feature.length - 1].value;
 
         switch(color){
@@ -272,17 +276,17 @@
             .attr('fill', function(d){
                 for(var i = 0; i< feature.length; i++){
                     if(feature[i].key === d.properties.name){
-                        return shade(Math.floor(feature[i].value));    
-                    }      
-                } 
+                        return shade(Math.floor(feature[i].value));
+                    }
+                }
             })
             .on('mouseenter', function(d){
                 for(var i = 0; i< feature.length; i++){
                     if(feature[i].key === d.properties.name){
-                        showToolTip([feature[i].key, feature[i].value.toFixed(2)],[d3.event.pageX, d3.event.pageY])   
-                    }      
-                }                
-                
+                        showToolTip([feature[i].key, feature[i].value.toFixed(2)],[d3.event.pageX, d3.event.pageY])
+                    }
+                }
+
             })
             .on('mouseleave', (d) => d3.select('#tooltip').style('display','none').style('z-index','0'));
     }
@@ -300,12 +304,12 @@
 
         margin = {top: 50, right: 50, bottom: 150, left: 50},
         width = widthWeight*window.innerWidth - margin.left - margin.right,
-        height = 600 - margin.top - margin.bottom; 
+        height = 600 - margin.top - margin.bottom;
 
         var svg = d3.select('#'+id).attr('width',width + margin.left + margin.right).attr('height', height + margin.top + margin.bottom).append('g').attr('transform',"translate("+margin.left+","+margin.top+")");
 
         var xScale = d3.scaleBand().domain(data.map(function(d){return d.key;})).range([0,width]);
-        var min = data[0].value; 
+        var min = data[0].value;
         var max = data[data.length - 1].value;
         var yScale = d3.scalePow().exponent(2).domain([0, data[0].value]).range([height,0]);
         let shade = d3.scaleSequential().domain([min,max]).interpolator(d3.interpolateCool);
@@ -329,22 +333,22 @@
             .attr("transform", "rotate(75)")
             .style("text-anchor", "start")
             .attr('font-size','5px')
-            .attr('font-size','4px'); 
+            .attr('font-size','4px');
         svg.append('g').call(d3.axisLeft(yScale));
 
         svg.append('text')
-            .attr('x', (width / 2))             
+            .attr('x', (width / 2))
             .attr('y', 0 - (margin.top / 2))
-            .attr('text-anchor', 'middle')  
-            .text(params.title);     
-          
+            .attr('text-anchor', 'middle')
+            .text(params.title);
+
     }
 
     function drawLineChart(data,id,params){
 
         margin = {top: 50, right: 50, bottom: 100, left: 150},
         width = 0.85*window.innerWidth - margin.left - margin.right,
-        height = 600 - margin.top - margin.bottom; 
+        height = 600 - margin.top - margin.bottom;
 
         var parseTime = d3.timeParse("%Y");
 
@@ -369,7 +373,7 @@
 
         if(params.date == true){
 
-            var xScale = d3.scaleTime().domain(d3.extent(data,function(d){return d.key;})).range([0,width]);   
+            var xScale = d3.scaleTime().domain(d3.extent(data,function(d){return d.key;})).range([0,width]);
 
         }else{
 
@@ -392,8 +396,8 @@
 
             svg.selectAll('.dot')
                 .data(data)
-                .enter().append('circle') 
-                .attr('class', 'dot') 
+                .enter().append('circle')
+                .attr('class', 'dot')
                 .attr('cx', function(d) { return xScale(d.key); })
                 .attr('cy', function(d) { return yScale(d.value); })
                 .attr("r", 2)
@@ -409,13 +413,13 @@
                 .attr("dy", ".35em")
                 .attr("transform", "rotate(75)")
                 .style("text-anchor", "start")
-                .attr('font-size','2px');             
+                .attr('font-size','2px');
             }else{
 
                 svg.selectAll('.dot')
                     .data(data)
-                    .enter().append('circle') 
-                    .attr('class', 'dot') 
+                    .enter().append('circle')
+                    .attr('class', 'dot')
                     .attr('cx', function(d) { return xScale(d.key); })
                     .attr('cy', function(d) { return yScale(d.value); })
                     .attr("r", 2)
@@ -427,17 +431,17 @@
                 svg.append('g').attr('transform',"translate(0,"+height+")")
                     .call(d3.axisBottom(xScale))
                     .selectAll("text")
-                    .remove();                
+                    .remove();
             }
 
 
         svg.append('g').call(d3.axisLeft(yScale));
 
         svg.append('text')
-            .attr('x', (width / 2))             
+            .attr('x', (width / 2))
             .attr('y', 0 - (margin.top / 2))
-            .attr('text-anchor', 'middle')  
-            .text(params.title);     
+            .attr('text-anchor', 'middle')
+            .text(params.title);
     }
 
     function drawScatterPlot(data,id,keys,params){
@@ -445,7 +449,7 @@
 
         margin = {top: 50, right: 50, bottom: 100, left: 50},
         width = 0.45*window.innerWidth - margin.left - margin.right,
-        height = 600 - margin.top - margin.bottom; 
+        height = 600 - margin.top - margin.bottom;
 
         var svg = d3.select('#'+id).attr('width',width + margin.left + margin.right).attr('height', height + margin.top + margin.bottom).append('g').attr('transform',"translate("+margin.left+","+margin.top+")");
 
@@ -460,8 +464,8 @@
 
         svg.selectAll('.dot')
             .data(data)
-            .enter().append('circle') 
-            .attr('class', 'dot') 
+            .enter().append('circle')
+            .attr('class', 'dot')
             .attr('cx', function(d) { return xScale(d[keys[1]]); })
             .attr('cy', function(d) { return yScale(d[keys[0]]); })
             .attr("r", 1.5)
@@ -475,15 +479,15 @@
             .attr("dy", ".35em")
             .attr("transform", "rotate(75)")
             .style("text-anchor", "start")
-            .attr('font-size','2px'); 
+            .attr('font-size','2px');
 
-        svg.append('g').call(d3.axisLeft(yScale));  
+        svg.append('g').call(d3.axisLeft(yScale));
 
         svg.append('text')
-        .attr('x', (width / 2))             
+        .attr('x', (width / 2))
         .attr('y', 0 - (margin.top / 2))
-        .attr('text-anchor', 'middle')  
-        .text(params.title);      
+        .attr('text-anchor', 'middle')
+        .text(params.title);
     }
 
     function showToolTip(value, coordinates){
